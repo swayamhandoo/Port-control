@@ -1,27 +1,3 @@
-"""
-=============================================================================
-PHASE 3 — MODEL TRAINING
-=============================================================================
-Input:  outputs/voyage_dataset.csv   (from phase1.py + phase2.py)
-Output: outputs/congestion_model.pkl
-        outputs/model_metrics.json
-
-Key improvements over original:
-  - 21 features (added prev_dep_delay, rolling_delay_3v, prev_was_late,
-    is_hel_to_tal, sched_duration_min) — all truly predictive, zero leakage
-  - Chronological 70/30 split (original used 80/20 — 80 is fine but 70/30
-    is safer here because the dataset is small at 900 voyages)
-  - Stratified cross-validation on train set to guard against overfitting
-  - Hyperparameter grid search (small but meaningful)
-  - Threshold tuning: reports F1 at 0.30, 0.40, 0.50 thresholds so the
-    operator can choose the recall/precision trade-off
-  - vessel_avg_delay recomputed on train split only (no leakage)
-  - SMOTE-lite: if delay rate < 8%, uses class_weight='balanced' + slight
-    max_depth reduction; if >= 8%, trains normally
-  - Saves model + scaler + threshold + feature list as a single bundle
-=============================================================================
-"""
-
 import os
 import json
 import joblib
@@ -60,9 +36,6 @@ print(f"Date range: {df['etd_sched'].min()} → {df['etd_sched'].max()}")
 
 # ──────────────────────────────────────────────────────────────────
 # 2. FEATURE LIST
-#    21 features — all derivable from scheduled + actual departure
-#    data available *before* a voyage completes.
-#    NO arrival data leaks in (arr_delay_min excluded).
 # ──────────────────────────────────────────────────────────────────
 MODEL_FEATURES = [
     # Speed at time of last ping before departure
@@ -133,8 +106,6 @@ print(f"Train delay rate: {y_train.mean():.1%}  |  Test delay rate: {y_test.mean
 
 # ──────────────────────────────────────────────────────────────────
 # 4. LEAK-FREE vessel_avg_delay
-#    Recompute using only the TRAIN rows so test vessels' future
-#    behaviour cannot leak into the feature.
 # ──────────────────────────────────────────────────────────────────
 train_vessel_delay = (
     df_model.iloc[:split_idx]
@@ -159,8 +130,6 @@ print("vessel_avg_delay recomputed on train split only ✅")
 
 # ──────────────────────────────────────────────────────────────────
 # 5. SCALE FEATURES
-#    RandomForest doesn't need scaling, but LogisticRegression does.
-#    We fit the scaler on train, transform both — good practice.
 # ──────────────────────────────────────────────────────────────────
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
@@ -170,8 +139,6 @@ X_test_scaled  = pd.DataFrame(X_test_scaled,  columns=MODEL_FEATURES)
 
 # ──────────────────────────────────────────────────────────────────
 # 6. CROSS-VALIDATION COMPARISON  (train set only)
-#    Three candidates evaluated with 5-fold stratified CV on train.
-#    This tells us which family to invest in before final tuning.
 # ──────────────────────────────────────────────────────────────────
 print("\n--- CROSS-VALIDATION MODEL COMPARISON (train set, 5-fold) ---")
 
@@ -249,8 +216,6 @@ print("Training complete ✅")
 
 # ──────────────────────────────────────────────────────────────────
 # 9. THRESHOLD TUNING
-#    For port planners, missing a delay (FN) is more costly than a
-#    false alarm (FP).  We report metrics at three thresholds.
 # ──────────────────────────────────────────────────────────────────
 print("\n--- THRESHOLD ANALYSIS ---")
 
