@@ -1,22 +1,3 @@
-"""
-╔═══════════════════════════════════════════════════════════════════════╗
-║  PORT COMMANDER — Streamlit Dashboard  v4.0                          ║
-║  Helsinki ↔ Tallinn Ferry Corridor (AIS Data 2018–2019)              ║
-╚═══════════════════════════════════════════════════════════════════════╝
-
-Run order:
-    cp sample_1000.csv port_commander/
-    cd port_commander
-    python phase1.py
-    python phase2.py
-    python phase2_clustering.py
-    python phase2_anomaly.py
-    python phase3.py
-    python phase3_optimizer.py
-    python phase4_forecast.py
-    streamlit run dashboard.py
-"""
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -235,7 +216,7 @@ def rule_prob(vessel, hour, dow, month):
     prob  += 0.03 if month in [1, 2, 12] else 0.0     # winter months
     return min(0.95, max(0.01, prob))
 
-# ── Load all outputs ─────────────────────────────────────────────
+
 df              = load_data()
 bundle          = load_model_bundle()
 model           = bundle["model"]          if bundle else None
@@ -252,7 +233,7 @@ net_data        = load_json("outputs/port_network.json")
 td              = compute_traffic_defaults(df)
 vd              = compute_vessel_avg_delay(df)
 
-# ── Helpers ──────────────────────────────────────────────────────
+
 def H(t, s=""):
     st.markdown(f'<div class="pc-title">{t}</div><div class="pc-sub">{s}</div>', unsafe_allow_html=True)
 
@@ -292,7 +273,7 @@ def fi_bars(fi_dict):
                  f'<div style="background:linear-gradient(90deg,#00d4ff,#0099bb);width:{pct:.1f}%;height:5px;border-radius:2px"></div></div></div>')
     return html
 
-# ── Sidebar ──────────────────────────────────────────────────────
+
 with st.sidebar:
     st.markdown('<div style="font-family:monospace;font-size:1.1rem;font-weight:700;color:#00d4ff">⚓ PORT COMMANDER</div>', unsafe_allow_html=True)
     st.markdown('<div style="font-size:.72rem;color:#475569;margin-bottom:1.2rem">Helsinki ↔ Tallinn · AIS 2018-19</div>', unsafe_allow_html=True)
@@ -331,9 +312,7 @@ with st.sidebar:
     st.markdown('<div style="font-family:monospace;font-size:.65rem;color:#334155;text-align:center;margin-top:2rem">v4.0 · Port Commander</div>', unsafe_allow_html=True)
 
 
-# ═══════════════════════════════════════════════════════════════════
-# PAGE 1 — OVERVIEW  (all stats from real voyage_dataset.csv)
-# ═══════════════════════════════════════════════════════════════════
+
 if "Overview" in page:
     H("Corridor Overview", "Live statistics from AIS data — Helsinki ↔ Tallinn ferry corridor (2018–2019)")
 
@@ -454,9 +433,6 @@ if "Overview" in page:
                 )
 
 
-# ═══════════════════════════════════════════════════════════════════
-# PAGE 2 — DELAY PREDICTOR
-# ═══════════════════════════════════════════════════════════════════
 elif "Predictor" in page:
     H("Delay Predictor", "Enter voyage parameters to estimate departure delay risk")
     if not model:
@@ -480,7 +456,7 @@ elif "Predictor" in page:
         with c6: roll_delay  = st.slider("Rolling 3-voyage avg delay (min)", -20.0, 20.0, -8.0, 0.5)
         with c7: was_late    = st.checkbox("Previous voyage was late (>5 min)", value=False)
 
-    sched_dur = 120.0  # typical HEL-TLL 2h schedule
+    sched_dur = 120.0  
 
     if st.button("  🚀  Run Prediction  ", type="primary"):
         inp    = build_feature_row(vessel, hour, dow, month, mean_sog, td, vd,
@@ -525,9 +501,7 @@ elif "Predictor" in page:
             st.dataframe(inp.T.rename(columns={0: "Value"}).round(4), use_container_width=True)
 
 
-# ═══════════════════════════════════════════════════════════════════
-# PAGE 3 — SCHEDULE OPTIMIZER (ML scan all hours)
-# ═══════════════════════════════════════════════════════════════════
+
 elif "Schedule Optimizer" in page:
     H("Schedule Optimizer", "Scan all 24 departure hours to find the lowest-risk slots for a vessel")
     if not model:
@@ -593,9 +567,7 @@ elif "Schedule Optimizer" in page:
             st.dataframe(hist_h, use_container_width=True)
 
 
-# ═══════════════════════════════════════════════════════════════════
-# PAGE 4 — CLUSTERING & NETWORK
-# ═══════════════════════════════════════════════════════════════════
+
 elif "Clustering" in page:
     H("Clustering & Network Analysis", "Vessel behaviour clusters, port bottleneck detection, and flow graph")
 
@@ -666,9 +638,6 @@ elif "Clustering" in page:
                 st.markdown(BADGE(f'{label}: hours {", ".join(hrs)}', cls) + "&nbsp;", unsafe_allow_html=True)
 
 
-# ═══════════════════════════════════════════════════════════════════
-# PAGE 5 — ANOMALY DETECTION
-# ═══════════════════════════════════════════════════════════════════
 elif "Anomaly" in page:
     H("Anomaly Detection", "Isolation Forest + Z-score outlier analysis and weather-proxy delay spikes")
 
@@ -741,9 +710,7 @@ elif "Anomaly" in page:
         st.dataframe(anom_df.round(3), use_container_width=True, hide_index=True)
 
 
-# ═══════════════════════════════════════════════════════════════════
-# PAGE 6 — BERTH OPTIMIZER
-# ═══════════════════════════════════════════════════════════════════
+
 elif "Berth" in page:
     H("Berth & Schedule Optimizer", "Constraint-based schedule optimisation with vessel priority and capacity limits")
 
@@ -810,9 +777,6 @@ elif "Berth" in page:
         st.caption(f"Showing {min(30, len(changed))} rescheduled voyages out of {len(schedule_df):,} total")
 
 
-# ═══════════════════════════════════════════════════════════════════
-# PAGE 7 — CONGESTION FORECAST
-# ═══════════════════════════════════════════════════════════════════
 elif "Forecast" in page:
     H("Congestion Forecast", "Time-series prediction of daily average departure delay for the next 30 days")
 
@@ -878,9 +842,6 @@ elif "Forecast" in page:
         st.caption(f"Method: {fm['method']} · Train: {fm['train_days']} days · Test: {fm['test_days']} days")
 
 
-# ═══════════════════════════════════════════════════════════════════
-# PAGE 8 — MODEL PERFORMANCE
-# ═══════════════════════════════════════════════════════════════════
 elif "Performance" in page:
     H("Model Performance", "Evaluation metrics, CV results, feature importances, and leakage audit")
 
