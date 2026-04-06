@@ -1,0 +1,7 @@
+•	Python
+•	Pandas
+•	Scikit-learn
+•	NetworkX
+•	Streamlit
+•	Matplotlib / Seaborn
+•	Jupyter Notebook
